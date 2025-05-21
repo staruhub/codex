@@ -33,3 +33,24 @@ describe("config.setApiKey", () => {
     expect(liveRef).toBe("my‑key");
   });
 });
+
+describe("config.getApiKey provider env", () => {
+  const ORIGINAL_DEEPSEEK = process.env["DEEPSEEK_API_KEY"];
+
+  beforeEach(() => {
+    process.env["DEEPSEEK_API_KEY"] = "test-key";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_DEEPSEEK !== undefined) {
+      process.env["DEEPSEEK_API_KEY"] = ORIGINAL_DEEPSEEK;
+    } else {
+      delete process.env["DEEPSEEK_API_KEY"];
+    }
+  });
+
+  it("reads provider specific API key", async () => {
+    const { getApiKey } = await import("../src/utils/config.js");
+    expect(getApiKey("deepseek")).toBe("test-key");
+  });
+});

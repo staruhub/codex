@@ -474,6 +474,9 @@ export AZURE_OPENAI_API_VERSION="2025-03-01-preview" (Optional)
 # OpenRouter
 export OPENROUTER_API_KEY="your-openrouter-key-here"
 
+# DeepSeek
+export DEEPSEEK_API_KEY="your-deepseek-key-here"
+
 # Similarly for other providers
 ```
 
