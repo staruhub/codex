@@ -40,6 +40,7 @@ import {
 import {
   getApiKey as fetchApiKey,
   maybeRedeemCredits,
+  promptForApiKey,
 } from "./utils/get-api-key";
 import { createInputItem } from "./utils/input-utils";
 import { initLogger } from "./utils/logger/log";
@@ -327,38 +328,46 @@ try {
   // ignore errors
 }
 
-if (cli.flags.login) {
-  apiKey = await fetchApiKey(client.issuer, client.client_id);
-  try {
-    const home = os.homedir();
-    const authDir = path.join(home, ".codex");
-    const authFile = path.join(authDir, "auth.json");
-    if (fs.existsSync(authFile)) {
-      const data = JSON.parse(fs.readFileSync(authFile, "utf-8"));
-      savedTokens = data.tokens;
+if (provider.toLowerCase() === "openai") {
+  if (cli.flags.login) {
+    apiKey = await fetchApiKey(client.issuer, client.client_id);
+    try {
+      const home = os.homedir();
+      const authDir = path.join(home, ".codex");
+      const authFile = path.join(authDir, "auth.json");
+      if (fs.existsSync(authFile)) {
+        const data = JSON.parse(fs.readFileSync(authFile, "utf-8"));
+        savedTokens = data.tokens;
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
+  } else if (!apiKey) {
+    apiKey = await fetchApiKey(client.issuer, client.client_id);
   }
-} else if (!apiKey) {
-  apiKey = await fetchApiKey(client.issuer, client.client_id);
-}
-// Ensure the API key is available as an environment variable for legacy code
-process.env["OPENAI_API_KEY"] = apiKey;
+  // Ensure the API key is available as an environment variable for legacy code
+  process.env["OPENAI_API_KEY"] = apiKey;
 
-if (cli.flags.free) {
-  // eslint-disable-next-line no-console
-  console.log(`${chalk.bold("codex --free")} attempting to redeem credits...`);
-  if (!savedTokens?.refresh_token) {
-    apiKey = await fetchApiKey(client.issuer, client.client_id, true);
-    // fetchApiKey includes credit redemption as the end of the flow
-  } else {
-    await maybeRedeemCredits(
-      client.issuer,
-      client.client_id,
-      savedTokens.refresh_token,
-      savedTokens.id_token,
-    );
+  if (cli.flags.free) {
+    // eslint-disable-next-line no-console
+    console.log(`${chalk.bold("codex --free")} attempting to redeem credits...`);
+    if (!savedTokens?.refresh_token) {
+      apiKey = await fetchApiKey(client.issuer, client.client_id, true);
+      // fetchApiKey includes credit redemption as the end of the flow
+    } else {
+      await maybeRedeemCredits(
+        client.issuer,
+        client.client_id,
+        savedTokens.refresh_token,
+        savedTokens.id_token,
+      );
+    }
+  }
+} else {
+  const envVar = `${provider.toUpperCase()}_API_KEY`;
+  apiKey = process.env[envVar] ?? "";
+  if (!apiKey) {
+    apiKey = await promptForApiKey(envVar, provider);
   }
 }
 

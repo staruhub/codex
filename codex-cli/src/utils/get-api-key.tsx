@@ -5,13 +5,14 @@ import { ApiKeyPrompt, WaitingForAuth } from "./get-api-key-components";
 import chalk from "chalk";
 import express from "express";
 import fs from "fs/promises";
-import { render } from "ink";
+import { Box, Text, render } from "ink";
 import crypto from "node:crypto";
 import { URL } from "node:url";
 import open from "open";
 import os from "os";
 import path from "path";
 import React from "react";
+import TextInput from "../components/vendor/ink-text-input.js";
 
 function promptUserForChoice(): Promise<Choice> {
   return new Promise<Choice>((resolve) => {
@@ -759,6 +760,53 @@ export async function getApiKey(
     spinner.unmount();
     throw err;
   }
+}
+
+function PasteKeyPrompt({
+  providerName,
+  onDone,
+}: {
+  providerName: string;
+  onDone: (key: string) => void;
+}): JSX.Element {
+  const [apiKey, setApiKey] = React.useState("");
+
+  return (
+    <Box flexDirection="column">
+      <Text>
+        Paste your {providerName} API key and press &lt;Enter&gt;:
+      </Text>
+      <TextInput
+        value={apiKey}
+        onChange={setApiKey}
+        onSubmit={(value: string) => {
+          if (value.trim() !== "") {
+            onDone(value.trim());
+          }
+        }}
+        placeholder="sk-..."
+        mask="*"
+      />
+    </Box>
+  );
+}
+
+export async function promptForApiKey(
+  envVar: string,
+  providerName: string,
+): Promise<string> {
+  return new Promise<string>((resolve) => {
+    const instance = render(
+      <PasteKeyPrompt
+        providerName={providerName}
+        onDone={(key: string) => {
+          process.env[envVar] = key;
+          resolve(key);
+          instance.unmount();
+        }}
+      />,
+    );
+  });
 }
 
 export { maybeRedeemCredits };
